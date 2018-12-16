@@ -262,8 +262,28 @@ MonoBehaviour:
   xmlr:
     xmlText: 
   cardNames: []
-  cards: []
-  decorators: []
+  cards:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  decorators:
+  - type: 
+    loc: {x: 0, y: 0, z: 0}
+    flip: 0
+    scale: 0
+  - type: 
+    loc: {x: 0, y: 0, z: 0}
+    flip: 0
+    scale: 0
+  - type: 
+    loc: {x: 0, y: 0, z: 0}
+    flip: 0
+    scale: 0
+  - type: 
+    loc: {x: 0, y: 0, z: 0}
+    flip: 0
+    scale: 0
   cardDefs: []
   deckAnchor: {fileID: 0}
 --- !u!114 &827460515
