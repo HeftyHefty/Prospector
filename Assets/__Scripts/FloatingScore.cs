@@ -3,19 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Scoreboard : MonoBehaviour
+public enum eFSState
+{
+    idle,
+    pre,
+    active,
+    post
+}
+
+public class FloatingScore : MonoBehaviour
 {
 
-    public static Scoreboard S;
-
-    [Header("Set in Inspector")]
-    public GameObject prefabFloatingScore;
-
     [Header("Set Dynamically")]
-    [SerializeField] private int _score = 0;
-    [SerializeField] private string _scoreString;
+    public eFSState state = eFSState.idle;
 
-    private Transform canvasTrans;
+    [SerializeField]
+    protected int _score = 0;
+    public string scoreString;
 
     public int score
     {
@@ -27,33 +31,36 @@ public class Scoreboard : MonoBehaviour
         {
             _score = value;
             scoreString = _score.ToString("N0");
+            GetComponent<Text>().text = scoreString;
         }
     }
 
-    public string scoreString
-    {
-        get
-        {
-            return (_scoreString);
-        }
-        set
-        {
-            _scoreString = value;
-            GetComponent<Text>().text = _scoreString;
-        }
-    }
+    public List<Vector2> bezierPts;
+    public List<float> fontSizes;
+    public float timeStart = -1f;
+    public float timeDuration = 1f;
+    public string easingCurve = Easing.InOut;
 
-    void Awake()
+    public GameObject reportFinishTo = null;
+    private RectTransform rectTrans;
+    private Text txt;
+
+    public void Init(List<Vector2> ePts, float eTimeS = 0, float eTimeD = 1)
     {
-        if (S == null)
+        rectTrans = GetComponent<RectTransform>();
+        rectTrans.anchoredPosition = Vector2.zero;
+        txt = GetComponent<Text>();
+        bezierPts = new List<Vector2>(ePts);
+
+        if (ePts.Count == 1)
         {
-            S = this;
+            transform.position = ePts[0];
+            return;
         }
-        else
-        {
-            Debug.LogError("ERROR: Scoreboard.Awake(): S is already set!");
-        }
-        canvasTrans = transform.parent;
+        if (eTimeS == 0) eTimeS = Time.time;
+        timeStart = eTimeS;
+        timeDuration = eTimeD;
+        state = eFSState.pre;
     }
 
     public void FSCallback(FloatingScore fs)
@@ -61,15 +68,45 @@ public class Scoreboard : MonoBehaviour
         score += fs.score;
     }
 
-    public FloatingScore CreateFloatingScore(int amt, List<Vector2> pts)
+    void Update()
     {
-        GameObject go = Instantiate<GameObject>(prefabFloatingScore);
-        go.transform.SetParent(canvasTrans);
-        FloatingScore fs = go.GetComponent<FloatingScore>();
-        fs.score = amt;
-        fs.reportFinishTo = this.gameObject;
-        fs.Init(pts);
-        return (fs);
+        if (state == eFSState.idle) return;
+        float u = (Time.time - timeStart) / timeDuration;
+        float uC = Easing.Ease(u, easingCurve);
+        if (u < 0)
+        {
+            state = eFSState.pre;
+            txt.enabled = false;
+        }
+        else
+        {
+            if (u >= 1)
+            {
+                uC = 1;
+                state = eFSState.post;
+                if (reportFinishTo != null)
+                {
+                    reportFinishTo.SendMessage("FSCallback", this);
+                    Destroy(gameObject);
+                }
+                else
+                {
+                    state = eFSState.idle;
+                }
+            }
+            else
+            {
+                state = eFSState.active;
+                txt.enabled = true;
+            }
+            Vector2 pos = Utils.Bezier(uC, bezierPts);
+            rectTrans.anchorMin = rectTrans.anchorMax = pos;
+            if (fontSizes != null && fontSizes.Count > 0)
+            {
+                int size = Mathf.RoundToInt(Utils.Bezier(uC, fontSizes));
+                GetComponent<Text>().fontSize = size;
+            }
+        }
     }
 
 }
